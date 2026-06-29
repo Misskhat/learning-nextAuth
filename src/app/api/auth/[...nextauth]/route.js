@@ -1,11 +1,7 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-
-const userList = [
-  { name: "hablu", password: "1234" },
-  { name: "bablu", password: "5678" },
-  { name: "dablu", password: "9012" },
-];
+import { dbConnect } from "../../../../lib/dbConnect";
+import bcrypt from "bcryptjs";
 
 export const authOptions = {
   // Configure one or more authentication providers
@@ -16,35 +12,59 @@ export const authOptions = {
       name: "Credentials",
 
       credentials: {
-        // email: {
-        //   label: "Email Id",
-        //   type: "email",
-        //   placeholder: "abc@email.com",
-        // },
-        username: { label: "Username", type: "text", placeholder: "jsmith" },
+        email: { label: "Email", type: "email", placeholder: "xyz@email.com" },
         password: { label: "Password", type: "password" },
       },
+
       async authorize(credentials, req) {
         // My own logic
-        const { username, password } = credentials;
+        try {
+          const { email, password } = credentials;
 
-        const user = userList.find((u) => u.name === username);
+          const user = await dbConnect("user").findOne({ email });
 
-        if (!user) return null;
+          if (!user) return null;
 
-        const isPasswordCorrect = user.password === password;
+          const isPasswordCorrect = await bcrypt.compare(
+            password,
+            user.password,
+          );
 
-        if (isPasswordCorrect) {
-          return user;
-        } else {
-          console.error({ message: "someting happen" });
+          if (isPasswordCorrect) {
+            return user;
+          } else {
+            console.error({ message: "someting happen" });
+          }
+
+          // Return null if user data could not be retrieved
+          return null;
+        } catch (error) {
+          console.log(error);
         }
-
-        // Return null if user data could not be retrieved
-        return null;
       },
     }),
   ],
+  callbacks: {
+    async signIn({ user, account, profile, email, credentials }) {
+      return true;
+    },
+    async redirect({ url, baseUrl }) {
+      return baseUrl;
+    },
+    async session({ session, token, user }) {
+      if (token) {
+        session.role = token.role;
+      }
+      return session;
+    },
+    async jwt({ token, user, account, profile, isNewUser }) {
+      if (user) {
+        token.email = user.email;
+        token.role = user.role;
+      }
+      return token;
+    },
+  },
 };
 const handler = NextAuth(authOptions);
 

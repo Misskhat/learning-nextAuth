@@ -1,4 +1,5 @@
 ![Next Auth Banner](https://i.ibb.co.com/TMqLSCfQ/image.png)
+
 ## Next Auth Starter Pack
 
 ## Overview
@@ -45,4 +46,3 @@ import bcrypt from 'bcryptjs';
 const isMatch = await bcrypt.compare(password, hashedPassword);
 console.log(isMatch); // true or false
 ```
-
